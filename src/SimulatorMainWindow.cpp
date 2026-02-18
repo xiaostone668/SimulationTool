@@ -424,38 +424,28 @@ void SimulatorMainWindow::onSendToGeomProcessor()
         return;
     }
 
-    // 1. Write current shape to a temp STEP file
-    QString tmpDir  = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-    QString tmpFile = QDir(tmpDir).filePath("simtool_geom_send.stp");
-
-    try {
-        STEPControl_Writer writer;
-        writer.Transfer(m_stepReader->getShape(), STEPControl_AsIs);
-        IFSelect_ReturnStatus stat = writer.Write(tmpFile.toStdString().c_str());
-        if (stat != IFSelect_RetDone) {
-            QMessageBox::warning(this, tr("STEP 写入失败"),
-                tr("无法写入临时 STEP 文件: %1").arg(tmpFile));
-            return;
-        }
-    } catch (const Standard_Failure& e) {
-        QMessageBox::warning(this, tr("OCC 错误"),
-            QString::fromLatin1(e.GetMessageString()));
+    // 直接发送原始 STEP 文件路径，避免 STEPControl_Writer 重写带来的兼容问题
+    QString sendPath = m_currentFilePath;
+    if (sendPath.isEmpty()) {
+        QMessageBox::warning(this, tr("路径错误"), tr("未找到原始 STEP 文件路径"));
         return;
     }
+    // 使用本地路径分隔符，确保 OCC 读取兼容
+    sendPath = QDir::toNativeSeparators(sendPath);
 
-    // 2. Write IPC block: CMD_SEND_GEOM + file path
+    // 写入 IPC 块：CMD_SEND_GEOM + 文件路径
     m_geomIpcShm->lock();
     GeomIPCBlock blk;
     memcpy(&blk, m_geomIpcShm->constData(), sizeof(blk));
     blk.cmd = CMD_SEND_GEOM;
     blk.seqNo = ++m_geomSeqNo;
-    QByteArray pathBytes = tmpFile.toLocal8Bit();
+    QByteArray pathBytes = sendPath.toLocal8Bit();
     strncpy(blk.geomFilePath, pathBytes.constData(), sizeof(blk.geomFilePath) - 1);
     memcpy(m_geomIpcShm->data(), &blk, sizeof(blk));
     m_geomIpcShm->unlock();
 
     m_statusLabel->setText(tr("几何已发送至 GeomProcessor #%1: %2")
-        .arg(m_geomSeqNo).arg(tmpFile));
+        .arg(m_geomSeqNo).arg(sendPath));
 }
 
 void SimulatorMainWindow::onPollGeomResult()
