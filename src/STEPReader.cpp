@@ -3,6 +3,8 @@
 // OpenCASCADE includes (common)
 #include <TopoDS.hxx>
 #include <TopExp_Explorer.hxx>
+#include <TopExp.hxx>
+#include <TopTools_IndexedMapOfShape.hxx>
 #include <TopAbs.hxx>
 #include <GProp_GProps.hxx>
 #include <BRepGProp.hxx>
@@ -163,30 +165,19 @@ void STEPReader::analyzeShape()
 
     m_geometryInfo = GeometryInfo();
 
-    // Count solids
-    for (TopExp_Explorer exp(m_shape, TopAbs_SOLID); exp.More(); exp.Next()) {
-        m_geometryInfo.numSolids++;
-    }
+    // 使用 IndexedMapOfShape 去重，避免 Compound 结构中重复计数
+    TopTools_IndexedMapOfShape solidMap, shellMap, faceMap, edgeMap, vertexMap;
+    TopExp::MapShapes(m_shape, TopAbs_SOLID,  solidMap);
+    TopExp::MapShapes(m_shape, TopAbs_SHELL,  shellMap);
+    TopExp::MapShapes(m_shape, TopAbs_FACE,   faceMap);
+    TopExp::MapShapes(m_shape, TopAbs_EDGE,   edgeMap);
+    TopExp::MapShapes(m_shape, TopAbs_VERTEX, vertexMap);
 
-    // Count shells
-    for (TopExp_Explorer exp(m_shape, TopAbs_SHELL); exp.More(); exp.Next()) {
-        m_geometryInfo.numShells++;
-    }
-
-    // Count faces
-    for (TopExp_Explorer exp(m_shape, TopAbs_FACE); exp.More(); exp.Next()) {
-        m_geometryInfo.numFaces++;
-    }
-
-    // Count edges
-    for (TopExp_Explorer exp(m_shape, TopAbs_EDGE); exp.More(); exp.Next()) {
-        m_geometryInfo.numEdges++;
-    }
-
-    // Count vertices
-    for (TopExp_Explorer exp(m_shape, TopAbs_VERTEX); exp.More(); exp.Next()) {
-        m_geometryInfo.numVertices++;
-    }
+    m_geometryInfo.numSolids   = solidMap.Extent();
+    m_geometryInfo.numShells   = shellMap.Extent();
+    m_geometryInfo.numFaces    = faceMap.Extent();
+    m_geometryInfo.numEdges    = edgeMap.Extent();
+    m_geometryInfo.numVertices = vertexMap.Extent();
 }
 
 void STEPReader::computeProperties()
