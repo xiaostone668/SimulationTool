@@ -99,6 +99,24 @@ void SimulatorMainWindow::resizeEvent(QResizeEvent* event)
 {
     QMainWindow::resizeEvent(event);
     // OccViewWidget handles its own resize internally via resizeEvent override
+    // 重新定位几何信息标签到左下角
+    if (m_geomInfoLabel && m_geomInfoLabel->isVisible() && m_centralWidget) {
+        const int margin = 10;
+        m_geomInfoLabel->move(margin,
+            m_centralWidget->height() - m_geomInfoLabel->height() - margin);
+    }
+}
+
+void SimulatorMainWindow::updateGeomInfoLabel(const QString& text)
+{
+    if (!m_geomInfoLabel || !m_centralWidget) return;
+    m_geomInfoLabel->setText(text);
+    m_geomInfoLabel->adjustSize();
+    const int margin = 10;
+    m_geomInfoLabel->move(margin,
+        m_centralWidget->height() - m_geomInfoLabel->height() - margin);
+    m_geomInfoLabel->raise();
+    m_geomInfoLabel->show();
 }
 
 // ---------------------------------------------------------------------------
@@ -176,6 +194,15 @@ void SimulatorMainWindow::createCentralWidget()
 
     layout->addWidget(m_occViewWidget);
     setCentralWidget(m_centralWidget);
+
+    // 几何信息悬浮标签（左下角，浮在 3D 视图之上，不参与布局）
+    m_geomInfoLabel = new QLabel(m_centralWidget);
+    m_geomInfoLabel->setStyleSheet(
+        "QLabel { background-color: rgba(0,0,0,160); color: #e0e0e0; "
+        "padding: 6px 10px; border-radius: 4px; "
+        "font-family: Consolas, monospace; font-size: 11px; }");
+    m_geomInfoLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+    m_geomInfoLabel->hide();
 }
 
 void SimulatorMainWindow::createParameterPanel()
@@ -301,6 +328,11 @@ void SimulatorMainWindow::onOpenSTEP()
         auto info = m_stepReader->getGeometryInfo();
         m_statusLabel->setText(
             tr("已加载: %1 个面, %2 个边").arg(info.numFaces).arg(info.numEdges));
+        // 左下角悬浮信息
+        updateGeomInfoLabel(
+            tr("面: %1   边: %2   实体: %3   Shell: %4")
+            .arg(info.numFaces).arg(info.numEdges)
+            .arg(info.numSolids).arg(info.numShells));
         m_startAction->setEnabled(true);
         if (m_sendToGeomAction) m_sendToGeomAction->setEnabled(true);
     } else {
@@ -476,6 +508,10 @@ void SimulatorMainWindow::onPollGeomResult()
         m_statusLabel->setText(
             tr("已更新几何（来自 GeomProcessor）: %1 个面, %2 个边")
             .arg(info.numFaces).arg(info.numEdges));
+        updateGeomInfoLabel(
+            tr("面: %1   边: %2   实体: %3   Shell: %4  [来自 GeomProcessor]")
+            .arg(info.numFaces).arg(info.numEdges)
+            .arg(info.numSolids).arg(info.numShells));
     } else {
         m_statusLabel->setText(tr("加载 GeomProcessor 结果失败"));
     }

@@ -121,6 +121,10 @@ private:
     QProgressBar* m_progressBar;
     QLabel* m_statusLabel;
 
+    // 3D 视图左下角几何信息悬浮标签
+    QLabel* m_geomInfoLabel = nullptr;
+    void    updateGeomInfoLabel(const QString& text);
+
     // Core components
     SimulationEngine* m_simulationEngine;
     STEPReader* m_stepReader;
