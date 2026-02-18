@@ -1,0 +1,119 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Two adjacent faces each in own sheetbody'),'2;1');
+FILE_NAME('adjacent_faces_sheetbodies.stp','2026-02-18T17:37:00',('Cline'),('SimulationTool'),'Open CASCADE STEP Processor 7.9.3','Open CASCADE STEP Processor 7.9.3','');
+FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 }'));
+ENDSEC;
+
+DATA;
+/* =========================================================== */
+/* First Sheet Body - Left Face */
+/* =========================================================== */
+
+/* Coordinate System */
+#200 = CARTESIAN_POINT('', (0., 0., 0.));
+#201 = DIRECTION('', (1., 0., 0.));
+#202 = DIRECTION('', (0., 1., 0.));
+#203 = AXIS2_PLACEMENT_3D('', #200, #201, #202);
+
+/* Left Face - 5x5 rectangle at origin */
+#210 = VERTEX_POINT('', #200);
+#211 = CARTESIAN_POINT('', (5., 0., 0.));
+#212 = VERTEX_POINT('', #211);
+#213 = CARTESIAN_POINT('', (5., 5., 0.));
+#214 = VERTEX_POINT('', #213);
+#215 = CARTESIAN_POINT('', (0., 5., 0.));
+#216 = VERTEX_POINT('', #215);
+
+#220 = EDGE_CURVE('', #210, #212, #221, .T.);
+#221 = LINE('', #200, #201);
+#222 = EDGE_CURVE('', #212, #214, #223, .T.);
+#223 = LINE('', #211, #202);
+#224 = EDGE_CURVE('', #214, #216, #225, .T.);
+#225 = LINE('', #213, #226);
+#226 = DIRECTION('', (-1., 0., 0.));
+#227 = EDGE_CURVE('', #216, #210, #228, .T.);
+#228 = LINE('', #215, #229);
+#229 = DIRECTION('', (0., -1., 0.));
+
+/* Face of left sheetbody */
+#230 = FACE_OUTER_BOUND('', #231, .T.);
+#231 = EDGE_LOOP('', (#220, #222, #224, #227));
+#232 = PLANE('', #203);
+#233 = ADVANCED_FACE('', (#231), #232, .T.);
+
+/* First Sheet Body */
+#240 = OPEN_SHELL('', (#233));
+#241 = SHELL_BASED_SURFACE_MODEL('', (#240));
+#242 = MANIFOLD_SURFACE_SHAPE_REPRESENTATION('', (#203, #241), #243);
+#243 = GEOMETRIC_REPRESENTATION_CONTEXT(3) GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#244)) GLOBAL_UNIT_ASSIGNED_CONTEXT((#245, #246, #247)) REPRESENTATION_CONTEXT('ID2', '3D Context');
+#244 = UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-006), #245, 'distance_accuracy', 'maximum uncertainty');
+#245 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI., .METRE.) );
+#246 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($, .RADIAN.) );
+#247 = ( NAMED_UNIT(*) SI_UNIT($, .STERADIAN.) SOLID_ANGLE_UNIT() );
+
+/* =========================================================== */
+/* Second Sheet Body - Right Face (adjacent to first) */
+/* =========================================================== */
+
+/* Coordinate System for right face */
+#250 = CARTESIAN_POINT('', (5., 0., 0.));
+#251 = AXIS2_PLACEMENT_3D('', #250, #201, #202);
+
+/* Right Face - 5x5 rectangle adjacent to left */
+#260 = VERTEX_POINT('', #250);
+#261 = CARTESIAN_POINT('', (10., 0., 0.));
+#262 = VERTEX_POINT('', #261);
+#263 = CARTESIAN_POINT('', (10., 5., 0.));
+#264 = VERTEX_POINT('', #263);
+#265 = CARTESIAN_POINT('', (5., 5., 0.));
+#266 = VERTEX_POINT('', #265);
+
+#270 = EDGE_CURVE('', #260, #262, #271, .T.);
+#271 = LINE('', #250, #201);
+#272 = EDGE_CURVE('', #262, #264, #273, .T.);
+#273 = LINE('', #261, #202);
+#274 = EDGE_CURVE('', #264, #266, #275, .T.);
+#275 = LINE('', #263, #226);
+#276 = EDGE_CURVE('', #266, #260, #277, .T.);
+#277 = LINE('', #265, #229);
+
+/* Face of right sheetbody */
+#280 = FACE_OUTER_BOUND('', #281, .T.);
+#281 = EDGE_LOOP('', (#270, #272, #274, #276));
+#282 = PLANE('', #251);
+#283 = ADVANCED_FACE('', (#281), #282, .T.);
+
+/* Second Sheet Body */
+#290 = OPEN_SHELL('', (#283));
+#291 = SHELL_BASED_SURFACE_MODEL('', (#290));
+#292 = MANIFOLD_SURFACE_SHAPE_REPRESENTATION('', (#251, #291), #243);
+
+/* =========================================================== */
+/* Product Structure */
+/* =========================================================== */
+
+#300 = PRODUCT_DEFINITION_CONTEXT('part definition', #301, 'design');
+#301 = APPLICATION_CONTEXT('mechanical design');
+#302 = PRODUCT('Left Sheet Face', 'SHEET_LEFT_001', '', (#303));
+#303 = PRODUCT_CONTEXT('', #301, 'mechanical');
+#304 = PRODUCT_DEFINITION_FORMATION('1', '', #302);
+#305 = PRODUCT_DEFINITION('design', '', #304, #300);
+#306 = PRODUCT_DEFINITION_SHAPE('', '', #305);
+#307 = SHAPE_DEFINITION_REPRESENTATION(#306, #242);
+
+#310 = PRODUCT('Right Sheet Face', 'SHEET_RIGHT_001', '', (#303));
+#311 = PRODUCT_DEFINITION_FORMATION('1', '', #310);
+#312 = PRODUCT_DEFINITION('design', '', #311, #300);
+#313 = PRODUCT_DEFINITION_SHAPE('', '', #312);
+#314 = SHAPE_DEFINITION_REPRESENTATION(#313, #292);
+
+/* Assembly relationship - two sheet bodies in same assembly */
+#320 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #305, #312, $);
+#321 = PRODUCT('Adjacent Faces Assembly', 'ASSEMBLY_002', '', (#303));
+#322 = PRODUCT_DEFINITION_FORMATION('1', '', #321);
+#323 = PRODUCT_DEFINITION('assembly', '', #322, #300);
+#324 = PRODUCT_DEFINITION_SHAPE('', '', #323);
+
+ENDSEC;
+END-ISO-10303-21;

@@ -11,6 +11,7 @@
 #include <QResizeEvent>
 #include <QStandardPaths>
 #include <QDir>
+#include <QUuid>
 #include <cstring>
 
 // OpenCASCADE includes
@@ -456,14 +457,37 @@ void SimulatorMainWindow::onSendToGeomProcessor()
         return;
     }
 
-    // 直接发送原始 STEP 文件路径，避免 STEPControl_Writer 重写带来的兼容问题
-    QString sendPath = m_currentFilePath;
-    if (sendPath.isEmpty()) {
+    if (m_currentFilePath.isEmpty()) {
         QMessageBox::warning(this, tr("路径错误"), tr("未找到原始 STEP 文件路径"));
         return;
     }
+
+    // 将 STEP 文件复制到 example\received\<GUID>.stp，保留原文件不变
+    // 使用可执行文件同级目录下的 example\received 文件夹
+    QString appDir = QCoreApplication::applicationDirPath();
+    // 尝试 appDir/../example/received（开发模式下 exe 在 build_cmake/Debug 或 Release）
+    // 同时也尝试 appDir/../../example/received
+    QString receivedDir = QDir::cleanPath(appDir + "/../../example/received");
+    if (!QDir(receivedDir).exists()) {
+        receivedDir = QDir::cleanPath(appDir + "/../example/received");
+    }
+    if (!QDir(receivedDir).exists()) {
+        // 回退：直接在 appDir 下创建
+        receivedDir = QDir::cleanPath(appDir + "/example/received");
+    }
+    // 确保目录存在
+    QDir().mkpath(receivedDir);
+
+    QString guid    = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QString tmpPath = QDir(receivedDir).filePath(guid + ".stp");
+
+    if (!QFile::copy(m_currentFilePath, tmpPath)) {
+        // 复制失败则直接使用原路径
+        tmpPath = m_currentFilePath;
+    }
+
     // 使用本地路径分隔符，确保 OCC 读取兼容
-    sendPath = QDir::toNativeSeparators(sendPath);
+    QString sendPath = QDir::toNativeSeparators(tmpPath);
 
     // 写入 IPC 块：CMD_SEND_GEOM + 文件路径
     m_geomIpcShm->lock();
