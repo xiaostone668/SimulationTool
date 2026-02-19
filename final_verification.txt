@@ -1,0 +1,45 @@
+=== STEP文件几何特征验证报告 ===
+
+文件: examples/two_sheetbodies.stp
+日期: 2026-02-18
+分析时间: 16:55
+
+=== 几何元素统计 ===
+1. ADVANCED_FACE (高级面): 2
+   - #43 = ADVANCED_FACE('', (#41), #42, .T.)  [第一个薄板体]
+   - #93 = ADVANCED_FACE('', (#91), #92, .T.)  [第二个薄板体]
+
+2. EDGE_CURVE (边曲线): 8
+   - 第一个面的4条边: #30, #32, #34, #37
+   - 第二个面的4条边: #80, #82, #84, #86
+
+3. VERTEX_POINT (顶点): 8
+4. OPEN_SHELL (开放壳体): 2
+5. FACE_SURFACE (面曲面): 0
+
+=== 验证结果 ===
+✓ 要求: 2个面
+✓ 实际: 2个面 (符合要求)
+
+✓ 要求: 8条边  
+✓ 实际: 8条边 (符合要求)
+
+=== 结论 ===
+示例STEP文件 two_sheetbodies.stp 完全符合要求：
+- 包含2个面（两个ADVANCED_FACE）
+- 包含8条边（每个面4条边，共8条EDGE_CURVE）
+
+文件结构说明：
+1. 第一个薄板体 (First Sheet Body - Bottom Plate)
+   - 位置: (0, 0, 0) 到 (10, 10, 0.5)
+   - 面: #43 (ADVANCED_FACE)
+   - 壳体: #50 (OPEN_SHELL)
+
+2. 第二个薄板体 (Second Sheet Body - Top Plate)
+   - 位置: (0, 10, 0) 到 (10, 20, 0.5)
+   - 面: #93 (ADVANCED_FACE)
+   - 壳体: #100 (OPEN_SHELL)
+
+两个薄板体均为10x10矩形，厚度0.5，在Y方向上相邻排列。
+
+验证状态: ✅ 通过

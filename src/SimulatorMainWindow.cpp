@@ -1,4 +1,4 @@
-#include "SimulatorMainWindow.h"
+﻿#include "SimulatorMainWindow.h"
 #include "SimulationEngine.h"
 #include "STEPReader.h"
 #include "SharedMemorySender.h"
@@ -12,6 +12,8 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QUuid>
+#include <QProcess>
+#include <QDebug>
 #include <cstring>
 
 // OpenCASCADE includes
@@ -100,7 +102,7 @@ void SimulatorMainWindow::resizeEvent(QResizeEvent* event)
 {
     QMainWindow::resizeEvent(event);
     // OccViewWidget handles its own resize internally via resizeEvent override
-    // 重新定位几何信息标签到左下角
+    // 閲嶆柊瀹氫綅鍑犱綍淇℃伅鏍囩鍒板乏涓嬭
     if (m_geomInfoLabel && m_geomInfoLabel->isVisible() && m_centralWidget) {
         const int margin = 10;
         m_geomInfoLabel->move(margin,
@@ -149,14 +151,14 @@ void SimulatorMainWindow::createMenuBar()
 
     m_fileMenu->addSeparator();
 
-    m_exitAction = new QAction(tr("退出(&X)"), this);
+    m_exitAction = new QAction(tr("閫€鍑?&X)"), this);
     m_exitAction->setShortcut(QKeySequence::Quit);
     connect(m_exitAction, &QAction::triggered, this, &SimulatorMainWindow::onExit);
     m_fileMenu->addAction(m_exitAction);
 
     // GeomProcessor menu
-    QMenu* geomMenu = menuBar()->addMenu(tr("几何处理(&G)"));
-    m_sendToGeomAction = new QAction(tr("发送到 GeomProcessor..."), this);
+    QMenu* geomMenu = menuBar()->addMenu(tr("鍑犱綍澶勭悊(&G)"));
+    m_sendToGeomAction = new QAction(tr("鍙戦€佸埌 GeomProcessor..."), this);
     m_sendToGeomAction->setShortcut(QKeySequence("Ctrl+G"));
     m_sendToGeomAction->setEnabled(false);
     connect(m_sendToGeomAction, &QAction::triggered,
@@ -166,19 +168,19 @@ void SimulatorMainWindow::createMenuBar()
 
 void SimulatorMainWindow::createToolBar()
 {
-    m_toolBar = addToolBar(tr("仿真控制"));
+    m_toolBar = addToolBar(tr("浠跨湡鎺у埗"));
 
     m_startAction = new QAction(tr("开始仿真"), this);
     m_startAction->setEnabled(false);
     connect(m_startAction, &QAction::triggered, this, &SimulatorMainWindow::onStartSimulation);
     m_toolBar->addAction(m_startAction);
 
-    m_pauseAction = new QAction(tr("暂停"), this);
+    m_pauseAction = new QAction(tr("鏆傚仠"), this);
     m_pauseAction->setEnabled(false);
     connect(m_pauseAction, &QAction::triggered, this, &SimulatorMainWindow::onPauseSimulation);
     m_toolBar->addAction(m_pauseAction);
 
-    m_stopAction = new QAction(tr("停止"), this);
+    m_stopAction = new QAction(tr("鍋滄"), this);
     m_stopAction->setEnabled(false);
     connect(m_stopAction, &QAction::triggered, this, &SimulatorMainWindow::onStopSimulation);
     m_toolBar->addAction(m_stopAction);
@@ -196,7 +198,7 @@ void SimulatorMainWindow::createCentralWidget()
     layout->addWidget(m_occViewWidget);
     setCentralWidget(m_centralWidget);
 
-    // 几何信息悬浮标签（左下角，浮在 3D 视图之上，不参与布局）
+    // 鍑犱綍淇℃伅鎮诞鏍囩锛堝乏涓嬭锛屾诞鍦?3D 瑙嗗浘涔嬩笂锛屼笉鍙備笌甯冨眬锛?
     m_geomInfoLabel = new QLabel(m_centralWidget);
     m_geomInfoLabel->setStyleSheet(
         "QLabel { background-color: rgba(0,0,0,160); color: #e0e0e0; "
@@ -208,13 +210,13 @@ void SimulatorMainWindow::createCentralWidget()
 
 void SimulatorMainWindow::createParameterPanel()
 {
-    m_parameterDock   = new QDockWidget(tr("仿真参数"), this);
+    m_parameterDock   = new QDockWidget(tr("浠跨湡鍙傛暟"), this);
     m_parameterWidget = new QWidget(m_parameterDock);
 
     QVBoxLayout* mainLayout = new QVBoxLayout(m_parameterWidget);
 
     // Time parameters group
-    QGroupBox*   paramGroup  = new QGroupBox(tr("时间参数"));
+    QGroupBox*   paramGroup  = new QGroupBox(tr("鏃堕棿鍙傛暟"));
     QFormLayout* formLayout  = new QFormLayout(paramGroup);
 
     m_timeStepSpinBox = new QDoubleSpinBox();
@@ -222,32 +224,32 @@ void SimulatorMainWindow::createParameterPanel()
     m_timeStepSpinBox->setValue(0.01);
     m_timeStepSpinBox->setDecimals(4);
     m_timeStepSpinBox->setSuffix(" s");
-    formLayout->addRow(tr("时间步长:"), m_timeStepSpinBox);
+    formLayout->addRow(tr("鏃堕棿姝ラ暱:"), m_timeStepSpinBox);
 
     m_totalTimeSpinBox = new QDoubleSpinBox();
     m_totalTimeSpinBox->setRange(0.1, 1000.0);
     m_totalTimeSpinBox->setValue(10.0);
     m_totalTimeSpinBox->setDecimals(2);
     m_totalTimeSpinBox->setSuffix(" s");
-    formLayout->addRow(tr("总时长:"), m_totalTimeSpinBox);
+    formLayout->addRow(tr("鎬绘椂闀?"), m_totalTimeSpinBox);
 
     mainLayout->addWidget(paramGroup);
 
     // Physics parameters group
-    QGroupBox*   physicsGroup  = new QGroupBox(tr("物理参数"));
+    QGroupBox*   physicsGroup  = new QGroupBox(tr("鐗╃悊鍙傛暟"));
     QFormLayout* physicsLayout = new QFormLayout(physicsGroup);
 
     m_dampingSpinBox = new QDoubleSpinBox();
     m_dampingSpinBox->setRange(0.0, 10.0);
     m_dampingSpinBox->setValue(0.1);
     m_dampingSpinBox->setDecimals(3);
-    physicsLayout->addRow(tr("阻尼系数:"), m_dampingSpinBox);
+    physicsLayout->addRow(tr("闃诲凹绯绘暟:"), m_dampingSpinBox);
 
     m_stiffnessSpinBox = new QDoubleSpinBox();
     m_stiffnessSpinBox->setRange(1.0, 100000.0);
     m_stiffnessSpinBox->setValue(1000.0);
     m_stiffnessSpinBox->setDecimals(1);
-    physicsLayout->addRow(tr("刚度系数:"), m_stiffnessSpinBox);
+    physicsLayout->addRow(tr("鍒氬害绯绘暟:"), m_stiffnessSpinBox);
 
     mainLayout->addWidget(physicsGroup);
     mainLayout->addStretch();
@@ -258,7 +260,7 @@ void SimulatorMainWindow::createParameterPanel()
 
 void SimulatorMainWindow::createStatusBar()
 {
-    m_statusLabel = new QLabel(tr("就绪"));
+    m_statusLabel = new QLabel(tr("灏辩华"));
     m_progressBar = new QProgressBar();
     m_progressBar->setMinimumWidth(200);
     m_progressBar->setRange(0, 100);
@@ -307,11 +309,11 @@ void SimulatorMainWindow::initializeOCC()
 void SimulatorMainWindow::onOpenSTEP()
 {
     QString filePath = QFileDialog::getOpenFileName(this,
-        tr("打开STEP文件"), "", tr("STEP Files (*.step *.stp)"));
+        tr("鎵撳紑STEP鏂囦欢"), "", tr("STEP Files (*.step *.stp)"));
 
     if (filePath.isEmpty()) return;
 
-    m_statusLabel->setText(tr("正在加载STEP文件..."));
+    m_statusLabel->setText(tr("姝ｅ湪鍔犺浇STEP鏂囦欢..."));
 
     if (m_stepReader->loadSTEPFile(filePath)) {
         m_currentFilePath = filePath;
@@ -328,28 +330,28 @@ void SimulatorMainWindow::onOpenSTEP()
 
         auto info = m_stepReader->getGeometryInfo();
         m_statusLabel->setText(
-            tr("已加载: %1 个面, %2 个边").arg(info.numFaces).arg(info.numEdges));
-        // 左下角悬浮信息
+            tr("宸插姞杞? %1 涓潰, %2 涓竟").arg(info.numFaces).arg(info.numEdges));
+        // 宸︿笅瑙掓偓娴俊鎭?
         updateGeomInfoLabel(
-            tr("面: %1   边: %2   实体: %3   Shell: %4")
+            tr("闈? %1   杈? %2   瀹炰綋: %3   Shell: %4")
             .arg(info.numFaces).arg(info.numEdges)
             .arg(info.numSolids).arg(info.numShells));
         m_startAction->setEnabled(true);
         if (m_sendToGeomAction) m_sendToGeomAction->setEnabled(true);
     } else {
-        m_statusLabel->setText(tr("STEP文件加载失败"));
-        QMessageBox::warning(this, tr("加载失败"),
-            tr("无法加载STEP文件: %1").arg(m_stepReader->getLastError()));
+        m_statusLabel->setText(tr("STEP鏂囦欢鍔犺浇澶辫触"));
+        QMessageBox::warning(this, tr("鍔犺浇澶辫触"),
+            tr("鏃犳硶鍔犺浇STEP鏂囦欢: %1").arg(m_stepReader->getLastError()));
     }
 }
 
 void SimulatorMainWindow::onSaveResults()
 {
     QString filePath = QFileDialog::getSaveFileName(this,
-        tr("保存结果"), "", tr("CSV Files (*.csv);;Text Files (*.txt)"));
+        tr("淇濆瓨缁撴灉"), "", tr("CSV Files (*.csv);;Text Files (*.txt)"));
     if (filePath.isEmpty()) return;
 
-    m_statusLabel->setText(tr("结果保存成功"));
+    m_statusLabel->setText(tr("缁撴灉淇濆瓨鎴愬姛"));
 }
 
 void SimulatorMainWindow::onExit()
@@ -361,7 +363,7 @@ void SimulatorMainWindow::onStartSimulation()
 {
     if (m_isSimulationRunning) return;
     if (!m_stepReader->hasShape()) {
-        QMessageBox::warning(this, tr("警告"), tr("请先加载STEP文件"));
+        QMessageBox::warning(this, tr("璀﹀憡"), tr("璇峰厛鍔犺浇STEP鏂囦欢"));
         return;
     }
 
@@ -378,7 +380,7 @@ void SimulatorMainWindow::onStartSimulation()
     m_startAction->setEnabled(false);
     m_pauseAction->setEnabled(true);
     m_stopAction->setEnabled(true);
-    m_statusLabel->setText(tr("仿真运行中..."));
+    m_statusLabel->setText(tr("浠跨湡杩愯涓?.."));
 }
 
 void SimulatorMainWindow::onPauseSimulation()
@@ -387,11 +389,11 @@ void SimulatorMainWindow::onPauseSimulation()
 
     if (m_simulationEngine->isPaused()) {
         m_simulationEngine->resumeSimulation();
-        m_pauseAction->setText(tr("暂停"));
-        m_statusLabel->setText(tr("仿真运行中..."));
+        m_pauseAction->setText(tr("鏆傚仠"));
+        m_statusLabel->setText(tr("浠跨湡杩愯涓?.."));
     } else {
         m_simulationEngine->pauseSimulation();
-        m_pauseAction->setText(tr("继续"));
+        m_pauseAction->setText(tr("缁х画"));
         m_statusLabel->setText(tr("仿真已暂停"));
     }
 }
@@ -413,19 +415,19 @@ void SimulatorMainWindow::onStopSimulation()
 void SimulatorMainWindow::onSimulationProgress(int progress)
 {
     m_progressBar->setValue(progress);
-    m_statusLabel->setText(tr("仿真运行中... %1%").arg(progress));
+    m_statusLabel->setText(tr("浠跨湡杩愯涓?.. %1%").arg(progress));
 }
 
 void SimulatorMainWindow::onSimulationFinished()
 {
     m_isSimulationRunning = false;
-    m_pauseAction->setText(tr("暂停"));
+    m_pauseAction->setText(tr("鏆傚仠"));
 
     m_startAction->setEnabled(true);
     m_pauseAction->setEnabled(false);
     m_stopAction->setEnabled(false);
     m_progressBar->setValue(100);
-    m_statusLabel->setText(tr("仿真完成"));
+    m_statusLabel->setText(tr("浠跨湡瀹屾垚"));
 }
 
 void SimulatorMainWindow::onSimulationError(const QString& error)
@@ -435,9 +437,9 @@ void SimulatorMainWindow::onSimulationError(const QString& error)
     m_startAction->setEnabled(true);
     m_pauseAction->setEnabled(false);
     m_stopAction->setEnabled(false);
-    m_statusLabel->setText(tr("仿真错误"));
+    m_statusLabel->setText(tr("浠跨湡閿欒"));
 
-    QMessageBox::critical(this, tr("仿真错误"), error);
+    QMessageBox::critical(this, tr("浠跨湡閿欒"), error);
 }
 
 // ---------------------------------------------------------------------------
@@ -447,49 +449,64 @@ void SimulatorMainWindow::onSimulationError(const QString& error)
 void SimulatorMainWindow::onSendToGeomProcessor()
 {
     if (!m_stepReader->hasShape()) {
-        QMessageBox::warning(this, tr("警告"), tr("请先加载 STEP 文件"));
+        QMessageBox::warning(this, tr("Warning"), tr("Please load STEP file first"));
+        return;
+    }
+
+    // First check if GeomProcessor process is running
+    QProcess process;
+    process.start("tasklist", QStringList() << "/FI" << "IMAGENAME eq GeomProcessor.exe");
+    process.waitForFinished(3000); // Wait up to 3 seconds
+    QString output = process.readAllStandardOutput();
+    QString error = process.readAllStandardError();
+    
+    // Debug output to console
+    qDebug() << "Tasklist output:" << output;
+    qDebug() << "Tasklist error:" << error;
+    if (!output.contains("GeomProcessor.exe")) {
+        QMessageBox::warning(this, tr("GeomProcessor Not Running"), tr("GeomProcessor.exe is not started. Please start GeomProcessor application first."));
         return;
     }
 
     if (!m_geomIpcShm || !m_geomIpcShm->isAttached()) {
-        QMessageBox::warning(this, tr("IPC 错误"),
-            tr("共享内存未就绪，请先启动 GeomProcessor.exe"));
+        QMessageBox::warning(this, tr("IPC 閿欒"),
+            tr("鍏变韩鍐呭瓨鏈氨缁紝璇峰厛鍚姩 GeomProcessor.exe"));
         return;
     }
 
     if (m_currentFilePath.isEmpty()) {
-        QMessageBox::warning(this, tr("路径错误"), tr("未找到原始 STEP 文件路径"));
+        QMessageBox::warning(this, tr("璺緞閿欒"), tr("鏈壘鍒板師濮?STEP 鏂囦欢璺緞"));
         return;
     }
 
-    // 将 STEP 文件复制到 example\received\<GUID>.stp，保留原文件不变
-    // 使用可执行文件同级目录下的 example\received 文件夹
+    // 灏?STEP 鏂囦欢澶嶅埗鍒?example\received\<GUID>.stp锛屼繚鐣欏師鏂囦欢涓嶅彉
+    // 浣跨敤鍙墽琛屾枃浠跺悓绾х洰褰曚笅鐨?example\received 鏂囦欢澶?
     QString appDir = QCoreApplication::applicationDirPath();
-    // 尝试 appDir/../example/received（开发模式下 exe 在 build_cmake/Debug 或 Release）
-    // 同时也尝试 appDir/../../example/received
+    // 灏濊瘯 appDir/../example/received锛堝紑鍙戞ā寮忎笅 exe 鍦?build_cmake/Debug 鎴?Release锛?
+    // 鍚屾椂涔熷皾璇?appDir/../../example/received
     QString receivedDir = QDir::cleanPath(appDir + "/../../example/received");
     if (!QDir(receivedDir).exists()) {
         receivedDir = QDir::cleanPath(appDir + "/../example/received");
     }
     if (!QDir(receivedDir).exists()) {
-        // 回退：直接在 appDir 下创建
+        // 鍥為€€锛氱洿鎺ュ湪 appDir 涓嬪垱寤?
         receivedDir = QDir::cleanPath(appDir + "/example/received");
     }
-    // 确保目录存在
+    // 纭繚鐩綍瀛樺湪
     QDir().mkpath(receivedDir);
 
     QString guid    = QUuid::createUuid().toString(QUuid::WithoutBraces);
     QString tmpPath = QDir(receivedDir).filePath(guid + ".stp");
 
     if (!QFile::copy(m_currentFilePath, tmpPath)) {
-        // 复制失败则直接使用原路径
+        // 澶嶅埗澶辫触鍒欑洿鎺ヤ娇鐢ㄥ師璺緞
         tmpPath = m_currentFilePath;
     }
 
-    // 使用本地路径分隔符，确保 OCC 读取兼容
+    // 浣跨敤鏈湴璺緞鍒嗛殧绗︼紝纭繚 OCC 璇诲彇鍏煎
     QString sendPath = QDir::toNativeSeparators(tmpPath);
 
-    // 写入 IPC 块：CMD_SEND_GEOM + 文件路径
+    // 鍐欏叆 IPC 鍧楋細CMD_SEND_GEOM + 鏂囦欢璺緞
     m_geomIpcShm->lock();
     GeomIPCBlock blk;
     memcpy(&blk, m_geomIpcShm->constData(), sizeof(blk));
@@ -500,7 +517,7 @@ void SimulatorMainWindow::onSendToGeomProcessor()
     memcpy(m_geomIpcShm->data(), &blk, sizeof(blk));
     m_geomIpcShm->unlock();
 
-    m_statusLabel->setText(tr("几何已发送至 GeomProcessor #%1: %2")
+    m_statusLabel->setText(tr("鍑犱綍宸插彂閫佽嚦 GeomProcessor #%1: %2")
         .arg(m_geomSeqNo).arg(sendPath));
 }
 
@@ -520,7 +537,7 @@ void SimulatorMainWindow::onPollGeomResult()
     QString resultPath = QString::fromLocal8Bit(blk.resultFilePath);
     if (resultPath.isEmpty()) return;
 
-    m_statusLabel->setText(tr("正在加载 GeomProcessor 结果: %1").arg(resultPath));
+    m_statusLabel->setText(tr("姝ｅ湪鍔犺浇 GeomProcessor 缁撴灉: %1").arg(resultPath));
 
     if (m_stepReader->loadSTEPFile(resultPath)) {
         m_stepReader->displayShape(m_context, true);
@@ -530,14 +547,14 @@ void SimulatorMainWindow::onPollGeomResult()
         }
         auto info = m_stepReader->getGeometryInfo();
         m_statusLabel->setText(
-            tr("已更新几何（来自 GeomProcessor）: %1 个面, %2 个边")
+            tr("宸叉洿鏂板嚑浣曪紙鏉ヨ嚜 GeomProcessor锛? %1 涓潰, %2 涓竟")
             .arg(info.numFaces).arg(info.numEdges));
         updateGeomInfoLabel(
-            tr("面: %1   边: %2   实体: %3   Shell: %4  [来自 GeomProcessor]")
+            tr("闈? %1   杈? %2   瀹炰綋: %3   Shell: %4  [鏉ヨ嚜 GeomProcessor]")
             .arg(info.numFaces).arg(info.numEdges)
             .arg(info.numSolids).arg(info.numShells));
     } else {
-        m_statusLabel->setText(tr("加载 GeomProcessor 结果失败"));
+        m_statusLabel->setText(tr("鍔犺浇 GeomProcessor 缁撴灉澶辫触"));
     }
 
     // Acknowledge: reset to IDLE
@@ -546,3 +563,13 @@ void SimulatorMainWindow::onPollGeomResult()
     memcpy(m_geomIpcShm->data(), &blk, sizeof(blk));
     m_geomIpcShm->unlock();
 }
+
+
+
+
+
+
+
+
+
+
