@@ -9,32 +9,20 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# Use Qt 6.7.3 (available in D:\ProgramFiles\Qt\6.7.3\msvc2022_64)
-set(QT_VERSION "6" CACHE STRING "Qt version: 5 or 6")
-set(Qt6_DIR "D:/ProgramFiles/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake config path")
+# Use Qt 5.6.3 (available in D:\Qt\Qt5.6.3)
+set(QT_VERSION "5" CACHE STRING "Qt version: 5 or 6")
+set(Qt5_DIR "D:/Qt/Qt5.6.3/msvc2015_64/lib/cmake/Qt5" CACHE PATH "Qt5 CMake config path")
 
-# Set Qt6_DIR for find_package
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};D:/ProgramFiles/Qt/6.7.3/msvc2022_64/lib/cmake")
+# Set Qt5_DIR for find_package
+set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};D:/Qt/Qt5.6.3/msvc2015_64/lib/cmake")
 
-# Try to find Qt
-find_package(Qt6 6.7 QUIET COMPONENTS Core Widgets OpenGL)
-if(Qt6_FOUND)
-  set(QT_LIBS Qt6::Widgets Qt6::OpenGL)
-  message(STATUS "Qt6 found, version: ${Qt6_VERSION}")
-else()
-  # Try Qt5 as fallback
-  find_package(Qt5 5.12 QUIET COMPONENTS Core Widgets OpenGL)
-  if(Qt5_FOUND)
-    set(QT_VERSION "5" CACHE STRING "Qt version: 5 or 6" FORCE)
-    set(QT_LIBS Qt5::Widgets Qt5::OpenGL)
-    message(STATUS "Qt5 found, version: ${Qt5_VERSION}")
-  else()
-    message(FATAL_ERROR "Qt not found. Please install Qt5 (5.12+) or Qt6 (6.7+)")
-  endif()
-endif()
+# Find Qt5 (5.6+)
+find_package(Qt5 5.6 REQUIRED COMPONENTS Core Widgets OpenGL)
+set(QT_LIBS Qt5::Widgets Qt5::OpenGL)
+message(STATUS "Qt5 found, version: ${Qt5_VERSION}")
 
 # OpenCASCADE 7.5+ (OCCT) installation path
-set(OCC_ROOT "D:/SDK/opencascade-7.9.3-vc14-64" CACHE PATH "OpenCASCADE/OCCT root (7.5+ required)")
+set(OCC_ROOT "D:/OpenCASCADE-7.7.0" CACHE PATH "OpenCASCADE/OCCT root (7.5+ required)")
 # Auto-detect lib dir: try win64/vc14/lib then lib
 set(_OCC_LIB_CANDIDATES "${OCC_ROOT}/win64/vc14/lib" "${OCC_ROOT}/lib")
 set(OCC_LIB_DIR "${OCC_ROOT}/lib" CACHE PATH "OCCT library directory")
@@ -143,6 +131,11 @@ if(NOT OCC_HAS_STEP)
   target_compile_definitions(${PROJECT_NAME} PRIVATE OCC_NO_STEP)
 endif()
 
+# Set UTF-8 encoding for MSVC compiler to fix Chinese character display
+if(MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
+endif()
+
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
     ${QT_LIBS}
@@ -174,50 +167,30 @@ if(NOT OCC_EXTRA_DLL_DIR)
 endif()
 
 # -----------------------------------------------------------------------
-# Auto-copy third-party DLLs required by TKService (OpenVR, FreeImage, FFmpeg)
-# These are in D:/SDK/3rdparty-vc14-64 and must be copied alongside the exe.
+# Auto-copy Qt5 DLLs required for runtime
 # -----------------------------------------------------------------------
 if(WIN32)
-  set(_SDK_BASE "D:/SDK/3rdparty-vc14-64")
-  set(_EXTRA_DLLS
-    "${_SDK_BASE}/openvr-1.14.15-64/bin/win64/openvr_api.dll"
-    "${_SDK_BASE}/freeimage-3.18.0-x64/bin/FreeImage.dll"
-    "${_SDK_BASE}/ffmpeg-3.3.4-64/bin/avcodec-57.dll"
-    "${_SDK_BASE}/ffmpeg-3.3.4-64/bin/avformat-57.dll"
-    "${_SDK_BASE}/ffmpeg-3.3.4-64/bin/swscale-4.dll"
-    "${_SDK_BASE}/ffmpeg-3.3.4-64/bin/avutil-55.dll"
-    "${_SDK_BASE}/tbb-2021.13.0-x64/bin/tbb12.dll"
-    "${_SDK_BASE}/tbb-2021.13.0-x64/bin/tbbmalloc.dll"
-    "${_SDK_BASE}/jemalloc-vc14-64/bin/jemalloc.dll"
-    "${_SDK_BASE}/freetype-2.13.3-x64/bin/freetype.dll"
-  )
-  foreach(_dll ${_EXTRA_DLLS})
-    if(EXISTS "${_dll}")
-      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_dll}" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-        COMMENT "Copying extra DLL: ${_dll}")
-    endif()
-  endforeach()
-
-  # Qt platform plugins
-  set(_QT_BIN "D:/ProgramFiles/Qt/6.7.3/msvc2022_64")
-  foreach(_qtdll Qt6Core Qt6Gui Qt6Widgets Qt6OpenGL Qt6Network Qt6Svg)
-    if(EXISTS "${_QT_BIN}/bin/${_qtdll}.dll")
+  # Qt5 DLLs
+  set(_QT_BIN "D:/Qt/Qt5.6.3/msvc2015_64/bin")
+  foreach(_qtdll Qt5Core Qt5Gui Qt5Widgets Qt5OpenGL)
+    if(EXISTS "${_QT_BIN}/${_qtdll}.dll")
       add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          "${_QT_BIN}/bin/${_qtdll}.dll"
+          "${_QT_BIN}/${_qtdll}.dll"
           "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-        COMMENT "Copying Qt DLL: ${_qtdll}.dll")
+        COMMENT "Copying Qt5 DLL: ${_qtdll}.dll")
     endif()
   endforeach()
-  # Qt platform plugin
+  # Qt5 platform plugin
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${_QT_BIN}/plugins/platforms/qwindows.dll"
+      "D:/Qt/Qt5.6.3/msvc2015_64/plugins/platforms/qwindows.dll"
       "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms/qwindows.dll"
-    COMMENT "Copying Qt platform plugin")
+    COMMENT "Copying Qt5 platform plugin")
 endif()
+
+message(STATUS "Note: If you encounter missing DLL errors at runtime, you may need to manually copy required DLLs to the executable directory")
 
 # Installation
 install(TARGETS ${PROJECT_NAME}
